@@ -1,0 +1,174 @@
+<!-- https://devriffs.com/setting-up-tonejs/ -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Megrim&family=Raleway&display=swap" rel="stylesheet">
+  <title>TextToMusic</title>
+</head>
+
+<body style="overflow-y: hidden;font-family: 'Raleway', sans-serif;">
+  <h1 style="font-family: 'Megrim', cursive;">TextToMusic</h1>
+  <div>This is TextToMusic. A very simple tool for generating sound out of text. You can paste big texts into it. It'll
+    sound interesting, I promise. :D It uses tone.js. Check it out!</div>
+  <br />
+  <button id="play-button">Play that text!</button>
+  <button id="stop-button">Stop</button>
+  <br /><br />
+  <textarea id="text-area" rows="4" style="width: 100%;">I love you! Ich liebe dich!</textarea>
+  <br /><br />
+  <div>
+    <input type="checkbox" id="infinite_loop" name="infinite_loop" checked>
+    <label for="infinite_loop">Infinite Loop</label>
+  </div>
+  <div>
+    <input type="checkbox" id="dreiklang" name="dreiklang" checked>
+    <label for="dreiklang">Major Triads (Dur Dreiklang)</label>
+  </div>
+  <br />
+  <div>
+    <input type="number" id="bpm" name="bpm" min="1" max="500" value="280">
+    <label for="bpm">Beats per minute (1-500)</label>
+  </div>
+  <br />
+  <br />
+  <div style="width: 100%;">
+    Log-Box
+    <button id="reset-button">Reset Log</button>
+    <pre id="log-box" style="padding: 20px; background-color: bisque;overflow-y: scroll; max-height: 300px;"></pre>
+  </div>
+
+  <script src="./node_modules/tone/build/Tone.js"></script>
+  <script>
+    const synth = new Tone.PolySynth().toDestination();
+
+    const playButton = document.getElementById("play-button");
+    const stopButton = document.getElementById("stop-button");
+    const resetButton = document.getElementById("reset-button");
+
+    let mapping = {
+      "a": [0, 2],
+      "b": [1, 2],
+      "c": [2, 2],
+      "d": [3, 2],
+      "e": [4, 2],
+      "f": [5, 2],
+      "g": [6, 2],
+      "h": [0, 3],
+      "i": [1, 3],
+      "j": [2, 3],
+      "k": [3, 3],
+      "l": [4, 3],
+      "m": [5, 3],
+      "n": [6, 3],
+      "o": [0, 4],
+      "p": [1, 4],
+      "q": [2, 4],
+      "r": [3, 4],
+      "s": [4, 4],
+      "t": [5, 4],
+      "u": [6, 4],
+      "v": [0, 5],
+      "w": [1, 5],
+      "x": [2, 5],
+      "y": [3, 5],
+      "z": [4, 5],
+      "ä": [1, 1],
+      "ö": [2, 1],
+      "ü": [3, 1],
+      "#": [4, 1]
+    }
+
+    let tones = {
+      0: "A",
+      1: "B",
+      2: "C",
+      3: "D",
+      4: "E",
+      5: "F",
+      6: "G"
+    }
+
+    let dreiKlang = {
+      0: ["A", "C", "E"],
+      1: ["B", "D", "F"],
+      2: ["C", "E", "G"],
+      3: ["D", "F", "A"],
+      4: ["E", "G", "B"],
+      5: ["F", "A", "C"],
+      6: ["G", "B", "D"]
+    }
+
+    let myInterval = null;
+
+    stopButton.addEventListener('click', () => {
+      if (myInterval !== null) {
+        clearInterval(myInterval);
+      }
+    })
+
+    resetButton.addEventListener('click', () => {
+      document.getElementById("log-box").innerHTML = "";
+    })
+
+    playButton.addEventListener('click', () => {
+
+      if (myInterval !== null) {
+        clearInterval(myInterval);
+      }
+
+      let text = document.getElementById("text-area").value;
+      let infLoopOn = document.getElementById("infinite_loop").checked;
+      let dreiKlangOn = document.getElementById("dreiklang").checked;
+      let bpm = document.getElementById("bpm").value;
+      let intervalLength = Number.isFinite(Number.parseInt(bpm)) ? Number.parseInt((60 / bpm) * 1000) : 200;
+      console.log(intervalLength);
+      let counter = 0;
+      if (text && text.length > 0) {
+        myInterval = setInterval(() => {
+          if (counter === text.length - 1) {
+            if (infLoopOn) {
+              counter = 0;
+            } else {
+              clearInterval(myInterval);
+            }
+          }
+          let letter = text[counter].toLowerCase();
+          if (mapping.hasOwnProperty(letter)) {
+            let myLog = [];
+            myLog.push(letter);
+            if (dreiKlangOn) {
+              let myTone = mapping[letter][0];
+              let myPitch = mapping[letter][1];
+              let myDreiklang = dreiKlang[myTone];
+              if (Array.isArray(myDreiklang) && myDreiklang.length > 0) {
+                myDreiklang.forEach(singleTone => {
+                  let toneString = `${singleTone}${myPitch}`;
+                  myLog.push(toneString);
+                  synth.triggerAttackRelease(toneString, "8n");
+                });
+              }
+
+            } else {
+              let myTone = mapping[letter][0];
+              let myPitch = mapping[letter][1];
+              let toneString = `${tones[myTone]}${myPitch}`
+              myLog.push(toneString);
+              synth.triggerAttackRelease(toneString, "8n");
+            }
+            console.log(myLog.join(" "));
+            let logBox = document.getElementById("log-box");
+            logBox.innerHTML += myLog.join(" ") + "<br/>";
+            logBox.scrollTop = logBox.scrollHeight;
+          }
+          counter++;
+        }, intervalLength);
+      }
+    });
+  </script>
+</body>
+
+</html>
